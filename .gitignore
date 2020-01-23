@@ -17,6 +17,11 @@
 # Output files from R CMD check
 /*.Rcheck/
 
+ignore/*
+/ignore/*
+ignore/
+/ignore/
+
 # RStudio files
 .Rproj.user/
 
