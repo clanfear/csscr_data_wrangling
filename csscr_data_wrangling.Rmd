@@ -1,0 +1,462 @@
+---
+title: "Data Wrangling in R"
+author: "Yuan Hsiao"
+date: "`r Sys.time()`"
+output: beamer_presentation
+---
+
+# Acknowledgement: The slides have been modified from materials by 
+
+* Chuck Lanfear (https://clanfear.github.io/CSSS508/)
+* Stephanie Lee(http://students.washington.edu/syl3/csscr/)
+
+
+---
+
+# Data cleaning
+
+For most statistical projects, the largest proportion of time spent is on **Data Cleaning**, which may involve:
+
+* Generating variables that are relevant for analyses
+* Subsetting the relevant observations that are relevant for analyses
+* Getting the data in the right shape for the statistical program
+
+---
+
+# tidyverse and dplyr
+
+We will be using the package **tidyverse** and its associated package **dplyr** in this workshop.
+
+In the console: **install.packages("tidyverse")**
+
+```{r}
+library(tidyverse)
+```
+
+---
+
+# Key functions in dplyr
+
+* Four main functions
+    * select() -- select columns
+    * filter() -- select rows
+    * mutate() -- add or transform variables
+    * summarize() -- create summary statistics
+    
+* Two useful helper functions
+    * `>%>` -- pipe operator: input into the next function
+    * group_by() -- break into subsets
+
+# Gapminder Data
+
+We'll be working with data from Hans Rosling's [Gapminder](http://www.gapminder.org) project.
+An excerpt of these data can be accessed through an R package called `gapminder`, cleaned and assembled by Jenny Bryan at UBC.
+
+--
+
+In the console: **install.packages("gapminder")**
+
+Load the package and data:
+```{r}
+library(gapminder)
+data("gapminder")
+```
+
+---
+
+# A quick look at the data
+
+```{r}
+str(gapminder)
+```
+
+---
+
+# What's Interesting Here?
+
+* **Factor** variables `country` and `continent`
+
+--
+
+* Many observations: $n=`r nrow(gapminder)`$ rows
+
+--
+
+* A nested/hierarchical structure: `year` in `country` in `continent`
+
+   + These are panel data!
+
+---
+
+# Pipes
+
+`dplyr` allows us to use pipe operators (`%>%`) to "pipe" data between functions. So instead of nesting functions like this:
+
+```{r}
+log(mean(gapminder$pop))
+```
+
+--
+
+We can pipe them like this:
+
+```{r}
+gapminder$pop %>% mean() %>% log()
+```
+
+--
+
+Read this as, "send `gapminder$pop` to `mean()`, then send the output of that to `log()`."
+In essence, pipes read "left to right" while nested functions read "inside to out."
+
+---
+
+# filter() -- Select rows that are relevant
+
+Let's say we want observations from Oman after 1980 and through 2000.
+
+--
+
+```{r}
+gapminder %>%
+    filter(country == "Oman" &
+           year > 1980 &
+           year <= 2000 )
+```
+
+---
+
+# Saving a Subset
+
+If we think a particular subset will be used repeatedly, we can save it and give it a name like any other object:
+
+```{r}
+former_yugoslavia <- c("Bosnia and Herzegovina", 
+                       "Croatia", 
+                       "Macedonia", "Montenegro", 
+                       "Serbia", "Slovenia")
+
+yugoslavia <- gapminder %>% 
+  filter(country %in% former_yugoslavia)
+
+head(yugoslavia, 4)
+```
+
+---
+
+# Sorting: arrange()
+
+Along with filtering the data to see certain rows, we might want to sort it:
+
+```{r}
+yugoslavia %>% 
+  arrange(year, desc(lifeExp))
+```
+
+The data are sorted by ascending **year** and descending **lifeExp**.
+
+---
+
+# Keeping Columns: select()
+
+Not only can we limit rows, but we can include specific columns (and put them in the order listed) using `select()`. 
+
+```{r}
+yugoslavia %>% 
+  select(country, year, pop) %>% 
+    head(4)
+```
+
+---
+
+# Dropping Columns: `select()`
+
+
+We can instead drop only specific columns with **select()** using
+**-** signs:
+
+```{r}
+yugoslavia %>% 
+  select(-continent, -pop, -lifeExp) %>% 
+    head(4)
+```
+
+---
+
+# Create New Columns: `mutate()`
+
+In `dplyr`, you can add new columns to a data frame using **mutate()**.
+
+--
+
+
+```{r}
+yugoslavia %>% filter(country == "Serbia") %>%
+    select(year, pop, lifeExp) %>%
+    mutate(pop_million = pop / 1000000,
+           life_exp_past_40 = lifeExp - 40) %>%
+    head(5)
+```
+
+Note you can create multiple variables in a single `mutate()` call by separating the expressions with commas.
+
+---
+
+# Within `mutate()`: `case_when()`
+
+**case_when()** allows you to create a new variable with values based on multiple logical statements. This is useful for making categorical variables or variables from combinations of other variables.
+
+```{r}
+gapminder %>% 
+  select(gdpPercap) %>% 
+    mutate(gdpPercap_ordinal = case_when(
+      gdpPercap < 700 ~ "low",
+      gdpPercap >= 700 & gdpPercap < 800 ~ "moderate",
+      TRUE ~ "high" )) # Value when all other statements are FALSE
+```
+
+---
+
+# Within `mutate()`: `recode()`
+
+**recode()** is another useful function to use inside **mutate()**. Use **recode()** to change specific values to other values, particularly with factors. You can change multiple values at the same time. Note if a value has spaces in it, you'll need to put it in backticks!
+
+```{r}
+yugoslavia %>% 
+  mutate(country = recode(country, 
+                        `Bosnia and Herzegovina`="B and H", #<<
+                        Montenegro="M")) %>% 
+  distinct(country)
+```
+
+---
+
+# summarizing in `dplyr`
+
+Often we want to create summary statistics for the whole sample, or by groups (e.g., male, female). In these cases **summarize()** is a very useful function, often combined with **group_by()**
+
+---
+
+# summarize() Example
+
+```{r}
+yugoslavia %>%
+    filter(year == 1982) %>%
+    summarize(n_obs = n(),
+              total_pop = sum(pop),
+              mean_life_exp = mean(lifeExp),
+              range_life_exp = max(lifeExp) - min(lifeExp))
+```
+
+These new variables are calculated using *all of the rows* in *yugoslavia*
+
+---
+
+# Grouping with `group_by()` 
+
+
+The special function `group_by()` changes how functions operate on the data, most importantly `summarize()`.
+
+Functions after `group_by()` are computed *within each group* as defined by variables given, rather than over all rows at once. Typically the variables you group by will be integers, factors, or characters, and not continuous real values.
+
+---
+
+# A `group_by()` example
+
+
+```{r}
+yugoslavia %>%
+  group_by(year) %>% #<<
+    summarize(num_countries = n_distinct(country),
+              total_pop = sum(pop),
+              total_gdp_per_cap = sum(pop*gdpPercap)/total_pop) %>%
+    head(5)
+```
+
+Because we did `group_by()` with `year` then used `summarize()`, we get *one row per value of `year`*!
+
+---
+
+# Checkpoint: Small exercise
+
+Task -- From the **gapminder** dataframe, we want the **average population in the millions** for each **country** in the continent **Europe**.
+
+Step-by-step breakup -- From the **gapminder** dataframe:
+
+* select relevant columns using **select()**
+* select relevant rows using **filter()**
+* create population in the millions using **mutate()**
+* create average population in the millions for each country using **group_by()** with **summarize()**
+
+---
+
+```{r}
+gapminder %>% 
+  select(country, continent, pop) %>% 
+    filter(continent == "Europe") %>% 
+      mutate(pop_million = pop / 1000000) %>% 
+        group_by(country) %>% 
+          summarise(mean_pop_million = mean(pop_million))
+```
+
+---
+
+# MERGING DATASETS -- `left_join()`
+
+In many cases, we want to merge different sources of data into one dataframe.
+
+* we can do this using **left_join()**
+
+* In **left_join()**, we say rows should *match* because they have some columns containing the same value. 
+
+* We list these in a **by = ** argument to the join.
+
+---
+
+# `nycflights13` Data
+
+We'll use data in the [`nycflights13` package](https://cran.r-project.org/web/packages/nycflights13/nycflights13.pdf). 
+
+Install and load it:
+```{r}
+# install.packages("nycflights13") # Uncomment to run
+library(nycflights13)
+```
+
+It includes five dataframes, some of which contain missing data (`NA`):
+
+* `flights`: flights leaving JFK, LGA, or EWR in 2013
+* `airlines`: airline abbreviations
+* `airports`: airport metadata
+* etc
+
+Note these are *separate data frames*, each needing to be *loaded separately*:
+
+```{r, eval=FALSE}
+data(flights)
+data(planes)
+data(airports)
+# and so on...
+```
+
+---
+
+# Join Example
+
+Who manufactures the planes that flew to Seattle?
+
+Take a look at the two dataframes we want to join: *flights* and *planes*
+
+```{r}
+head(flights)
+```
+
+---
+
+```{r}
+head(planes)
+```
+
+We want to join by the variable **tail_num**
+
+---
+
+```{r}
+flights %>% 
+  filter(dest == "SEA") %>% 
+      left_join(planes %>% select(tailnum, manufacturer),
+                by = "tailnum")
+```
+
+---
+
+# Reshaping the data in the right format
+
+In statistical analyses, we often want each row to be the unit of analysis (i.e., an observation). For example, take a look at the gapminder data
+
+```{r}
+head(gapminder)
+```
+
+Each row is a country-year, which is the basic unit of analysis
+
+---
+
+# Reshaping the data in the right format
+
+What if the data looked like this?
+
+```{r}
+lifeExp_wide <- gapminder %>% 
+  select(-pop, -gdpPercap) %>% 
+  gather(variable, value, lifeExp) %>% 
+    unite(var, variable, year) %>% 
+      spread(var, value)
+
+names(lifeExp_wide)
+```
+
+---
+
+```{r}
+head(lifeExp_wide)
+```
+
+---
+
+# Reshaping the data in the right format -- **gather()**
+
+* `gather()`: takes a set of columns and rotates them down to make two new columns (which you can name yourself): 
+    * A **key** that stores the original column names
+    * A **value** with the values in those original columns
+    * Additional arguments to specify which columns you want
+    
+---
+
+# `gather()` Example
+
+```{r}
+lifeExp_df1 <- lifeExp_wide %>% 
+  gather(year, lifeExp, -country, -continent)
+
+head(lifeExp_df1)
+```
+
+---
+
+# `gather()` Example with `parse_number()`
+
+```{r}
+lifeExp_df1 <- lifeExp_wide %>% 
+  gather(year, lifeExp, -country, -continent) %>% 
+    mutate(year = parse_number(year))
+
+head(lifeExp_df1)
+```
+
+---
+
+# `spread()` does the opposite of `gather()`
+
+For example:
+
+```{r}
+(too_long_data <- data.frame(Group = c(rep("A", 3), rep("B", 3)),
+                             Statistic = rep(c("Mean", "Median", "SD"), 2),
+                             Value = c(1.28, 1.0, 0.72, 2.81, 2, 1.33)))
+```
+
+---
+
+# After `spread()`
+
+```{r}
+(just_right_data <- too_long_data %>%
+    spread(key = Statistic, value = Value))
+```
+
+---
+
+# We're done!
+
+Questions?
