@@ -13,7 +13,7 @@ class: center, top, title-slide
 # Data Wrangling
 ## UW CSSCR
 ### Chuck Lanfear
-### Jan 29, 2019<br>Updated: Jan 28, 2020
+### Jan 29, 2019<br>Updated: Jan 29, 2020
 
 ---
 
@@ -177,7 +177,7 @@ Logical operators test boolean conditions and return `TRUE`, `FALSE`, or `NA`.
 
 --
 
-`filter()` returns rows when the condition is `TRUE`.
+`filter()` returns rows when the condition inside is `TRUE`.
 
 We used `==` for testing "equals": `country == "Oman"`.
 
@@ -187,17 +187,22 @@ There are many other [logical operators](http://www.statmethods.net/management/o
 
 --
 * `!=`: not equal to
+
 --
 * `&gt;`, `&gt;=`, `&lt;`, `&lt;=`: less than, less than or equal to, etc.
+
 --
 * `%in%`: used with checking equal to one of several values
+
 --
 
 Or we can combine multiple logical conditions:
 
 * `&amp;`: both conditions need to hold (AND)
+
 --
 * `|`: at least one condition needs to hold (OR)
+
 --
 * `!`: inverts a logical condition (`TRUE` becomes `FALSE`, `FALSE` becomes `TRUE`)
 
@@ -604,7 +609,7 @@ Functions after `group_by()` are computed *within each group* as defined by uniq
 Typically the variables you group by will be integers, factors, or characters, and *not continuous real values*.
 
 ---
-`group_by()` example
+# `group_by()` Example
 
 
 
@@ -614,18 +619,17 @@ yugoslavia %&gt;%
     summarize(num_countries = n_distinct(country),
               total_pop = sum(pop),
               total_gdp_per_cap = sum(pop*gdpPercap)/total_pop) %&gt;%
-    head(5)
+    head(4)
 ```
 
 ```
-## # A tibble: 5 x 4
+## # A tibble: 4 x 4
 ##    year num_countries total_pop total_gdp_per_cap
 ##   &lt;int&gt;         &lt;int&gt;     &lt;int&gt;             &lt;dbl&gt;
 ## 1  1952             5  15436728             3030.
 ## 2  1957             5  16314276             4187.
 ## 3  1962             5  17099107             5257.
 ## 4  1967             5  17878535             6656.
-## 5  1972             5  18579786             8730.
 ```
 
 Because we did `group_by()` with `year` then used `summarize()`, we get *one row per value of `year`*!
@@ -716,19 +720,21 @@ library(tidyr)
 * Ready to throw into `ggplot()` or a model!
 
 ---
-`tidyr` Functions
+# `tidyr` Functions
 
-* **`pivot_longer()`**: takes a set of columns and pivots them down to make two new columns (which you can name yourself): 
-    * `names_to=` is column that stores the original column names
-    * `value_to=` is column with the values in those original columns
+* **`pivot_longer()`**: takes a set of columns and pivots them down to make two new columns (which you can name yourself). 
+    * Main arguments: 
+        + `names_to=` is column that stores the original column names
+        + `value_to=` is column with the values in those original columns
     * Both arguments must be in quotes--they don't exist yet!
 
 --
 
-* **`pivot_wider()`**: inverts `pivot_longer()` by taking two columns and pivoting them up into multiple columns, Takes two arguments:
-   * `names_from=` column containing names of new columns 
-   * `values_from=` column containing values for new columns
-   * Arguments don't need to be in quotes--they already exist!
+* **`pivot_wider()`**: inverts `pivot_longer()` by taking two columns and pivoting them up into multiple columns. 
+    * Main arguments:
+        + `names_from=` column containing names of new columns 
+        + `values_from=` column containing values for new columns
+    * Arguments don't *need* to be in quotes--they already exist!
 
 ---
 # Pivot Back
@@ -748,6 +754,12 @@ enrollment_wide %&gt;%
 ## 3 Public Health        2     3
 ## 4 Other                5     1
 ```
+
+This returns us to our original data format.
+
+`pivot_wider()` is great for taking clean, tidy data and turning it into tables.
+
+Wide format is also needed for certain estimation techniques such as structural equation models (e.g. `lavaan`).
 
 ---
 # Resources
